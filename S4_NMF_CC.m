@@ -6,18 +6,28 @@ addpath('/home/changyale/python/nbs/');
 load data_gene_expression_copd
 load data_gene_expression_copd_1500
 load data_gene_expression_copd_3000
+load data_gene_expression_ecl
+load data_gene_expression_ecl_1439
 
 % choose which dataset to use
-flag_dataset = 3;
+flag_dataset = 5;
 if flag_dataset == 1
     data_use = data_exp;
 elseif flag_dataset == 2
     data_use = data_exp_1500;
 elseif flag_dataset == 3
     data_use = data_exp_3000;
+elseif flag_dataset == 4
+    data_use = data_exp_ecl;
+elseif flag_dataset == 5
+    data_use = data_gene_expression_ecl_1439;
 else
     disp(['Error: Should Specify input dataset'])
 end
+
+% Specify the number of latent factors(#metagenes). Note that the number of
+% clusters is usually set to be equal to this value in subsequent analysis
+cnum = 4;
 
 % whether to normalize the dataset
 flag_normalization = true;
@@ -50,10 +60,6 @@ optionnnls.eta = (max(max(X)))^2;
 optionnnls.beta = 0;
 optionnnls.iter = 1000;
 optionnnls.dis = false;
-
-% Specify the number of latent factors(#metagenes). Note that the number of
-% clusters is usually set to be equal to this value in subsequent analysis
-cnum = 6;
 
 % Initialization of variables
 A = {};
