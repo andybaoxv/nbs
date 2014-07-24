@@ -10,7 +10,7 @@ load data_gene_expression_ecl
 load data_gene_expression_ecl_1439
 
 % choose which dataset to use
-flag_dataset = 5;
+flag_dataset = 1;
 if flag_dataset == 1
     data_use = data_exp;
 elseif flag_dataset == 2
@@ -73,8 +73,8 @@ tic
 parfor i = 1:n_consensus
     % Apply NMF
     disp(['run-> ' num2str(i)]);
-    %[A{i},Y{i},numIter{i},tElapsed{i},finalResidual{i}] = nmfnnls(X,cnum,cczoptions);
-    [A{i},Y{i},numIter{i},tElapsed{i},finalResidual{i}] = sparsenmfnnls(X,cnum,optionnnls);
+    [A{i},Y{i},numIter{i},tElapsed{i},finalResidual{i}] = nmfnnls(X,cnum,cczoptions);
+    %[A{i},Y{i},numIter{i},tElapsed{i},finalResidual{i}] = sparsenmfnnls(X,cnum,optionnnls);
     % Normalize the columns of A{i}, make it sum to 1
     tmp_1 = diag(1./sum(A{i}));
     tmp_2 = diag(sum(A{i}));

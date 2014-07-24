@@ -13,7 +13,7 @@ option.zoptions.iter = 500;
 
 % Relate the clustering performance
 % Better set this value to be 200
-option.zoptions.gamma = 2e10;
+option.zoptions.gamma = 0;
 option.zoptions.tof = 1e-4;
 option.zoptions.dis = false;
 option.zoptions.distance = 'nnls';
@@ -25,15 +25,15 @@ tstats = {};
 indClust_NBS = {};
 % Normalization of the original dataset
 if flag_normalization
-    X = NormalizeFea(sub_gene_data',0);
+    X = NormalizeFea(data_use,1);
 else
-    X = sub_gene_data';
+    X = data_use;
 end
-    
+  
 tic
-for i = 1:n_consensus
-    i
-    [W{i},H{i},tstats{i}] =  nbs_nmf_cluster_network_nmf(X',...
+parfor i = 1:n_consensus
+    disp(['run-> ' num2str(i)]);
+    [W{i},H{i},tstats{i}] =  nbs_nmf_cluster_network_nmf(X,...
         option.K,0,-1,option.zoptions.gamma,sparse(subnet_laplacian),...
         option.zoptions);
     % Cluster patients based on H
@@ -42,7 +42,7 @@ end
 toc
 
 % Hierarchical clustering based on the co-clustering matrix
-tmp = size(sub_gene_data,2);
+tmp = size(X,2);
 mat_co_nbs = zeros(tmp);
 for i = 1:n_consensus
     for j = 1:tmp

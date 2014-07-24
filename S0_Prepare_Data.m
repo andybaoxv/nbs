@@ -4,10 +4,10 @@ tic
 %% Load STRING gene interaction network contained in NBS data folder
 
 % Directory of NBS data
-basedata_path = '/Users/changyale/dataset/nbs_data';
+basedata_path = '/home/changyale/dataset/nbs_data';
 
 % Directory of NBS code
-library_path = '/Users/changyale/matlab/nbs';
+library_path = '/home/changyale/matlab/nbs';
 addpath(genpath(library_path))
 
 % load STRING network, which contain 12233 genes.
