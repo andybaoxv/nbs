@@ -14,6 +14,10 @@ option.zoptions.iter = 500;
 % Relate the clustering performance
 % Better set this value to be 200
 option.zoptions.gamma = 0;
+
+% This parameter is very critical for the performance of the algorithm
+option.zoptions.optGamma = 1;
+
 option.zoptions.tof = 1e-4;
 option.zoptions.dis = false;
 option.zoptions.distance = 'nnls';
@@ -25,11 +29,13 @@ tstats = {};
 indClust_NBS = {};
 % Normalization of the original dataset
 if flag_normalization
-    X = NormalizeFea(data_use,1);
+    X = NormalizeFea(sub_gene_data,1);
 else
-    X = data_use;
+    X = sub_gene_data;
 end
-  
+
+load subnet_laplacian
+
 tic
 parfor i = 1:n_consensus
     disp(['run-> ' num2str(i)]);

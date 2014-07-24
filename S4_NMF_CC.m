@@ -10,7 +10,7 @@ load data_gene_expression_ecl
 load data_gene_expression_ecl_1439
 
 % choose which dataset to use
-flag_dataset = 1;
+flag_dataset = 5;
 if flag_dataset == 1
     data_use = data_exp;
 elseif flag_dataset == 2
@@ -49,7 +49,7 @@ n_consensus = 100;
 % Maximal Number of Iterations
 cczoptions.iter = 1000;
 % Tolerance/Precision
-cczoptions.tof = 1e-3;
+cczoptions.tof = 1e-4;
 % Whether to display result
 cczoptions.dis = false;
 % 'nnls' is an optimization technique to solve the NMF problem
