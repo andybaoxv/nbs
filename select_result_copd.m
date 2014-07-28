@@ -6,4 +6,4 @@ for i = 1:n_consensus
 end
 idx_sel = find(rand_list == max(rand_list))
 
-disp(['Max Randlist' num2str(rand_list(idx_sel))]);
+disp(['Max Randlist: ' num2str(rand_list(idx_sel))]);

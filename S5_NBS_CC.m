@@ -28,10 +28,11 @@ H = {};
 tstats = {};
 indClust_NBS = {};
 % Normalization of the original dataset
+data_use = data_copd_overlap_with_ecl;
 if flag_normalization
-    X = NormalizeFea(sub_gene_data,1);
+    X = NormalizeFea(data_use,1);
 else
-    X = sub_gene_data;
+    X = data_use;
 end
 
 load subnet_laplacian

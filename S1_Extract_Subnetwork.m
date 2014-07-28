@@ -59,6 +59,9 @@ subnet_laplacian = sim_to_knn_glap(subnet_influence,n_neighbors);
 % extract subset of data
 sub_gene_data = gene_data(keylist_gene_ind,:);
 
+% extract subset of probe names
+sub_gene_probe_name = gene_probe_name(keylist_gene_ind);
+
 % extract subset of entrez id
 sub_gene_entrez_id = gene_entrez_id(keylist_gene_ind);
 

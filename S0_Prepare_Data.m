@@ -4,10 +4,10 @@ tic
 %% Load STRING gene interaction network contained in NBS data folder
 
 % Directory of NBS data
-basedata_path = '/home/changyale/dataset/nbs_data';
+basedata_path = '/Users/changyale/dataset/nbs_data';
 
 % Directory of NBS code
-library_path = '/home/changyale/matlab/nbs';
+library_path = '/Users/changyale/matlab/nbs';
 addpath(genpath(library_path))
 
 % load STRING network, which contain 12233 genes.
@@ -36,6 +36,9 @@ gene_data = cell2mat(gene_eclipse(2:n_row,5:n_col));
 % Extract patient ID
 tmp = gene_eclipse';
 patient_id = tmp(5:n_col,1);
+
+% Extract probe names
+gene_probe_name = gene_eclipse(2:n_row,1);
 
 % Extract HGNC Gene Symbol
 gene_hgnc_symbol = gene_eclipse(2:n_row,2);
