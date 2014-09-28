@@ -1,0 +1,36 @@
+Hi Yale,
+
+I am attaching the code that I used to generate the clinical characteristics pdf we reviewed last week. The relevant part of the code, from a cluster characteristics standpoint is this:
+
+x<-describeBy(eclhmp[,c(2,4:9,42,43)],eclhmp$cluster)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(eclhmp$cluster,eclhmp$ProspectiveModSevExac),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(ProspectiveModSevExac)~as.factor(cluster),data=eclhmp)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(ProspectiveModSevExac ~ as.factor(cluster), data = eclhmp)
+ summary(x)$coefficients
+
+ cat("\nZero-inflated negative binomial does not converge")
+# eclhmp$ExacYN<-ifelse(eclhmp$ProspectiveModSevExac>0,1,0)
+# zi<-zeroinfl(formula = ProspectiveModSevExac ~ as.factor(cluster) | ExacYN, data = eclhmp, dist = "negbin", EM = TRUE)
+
+ eclhmp$ExacBin<-ifelse(eclhmp$ProspectiveModSevExac>=2,1,0)
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ x<-glm(ExacBin ~ as.factor(cluster), data = eclhmp, family= "binomial")
+ summary(x)$coefficients
+
+
+However, for the comparison of cluster characteristics that generate a p-value for the hypothesis of whether there is a significant difference in means among any of the clusters, I think ANOVA would be a reasonable approach. I believe that Junxiang has already implemented this, so it would probably be most efficient to check with him first.
+
+I decided not to re-normalize the gene expression data. I don't think the normalization is the problem, since we have decent replication with the 'outlying' COPDGene cohort. I'll think tonight a bit more about what to do next for NBS. It would be good to know what the results look like without doing your standardization step.
+
+See you tomorrow!
+
+Pete

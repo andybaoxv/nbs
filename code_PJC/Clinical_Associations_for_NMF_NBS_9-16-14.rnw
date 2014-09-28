@@ -1,0 +1,548 @@
+
+
+\documentclass{article}
+\usepackage{graphics}
+\usepackage{rotating}
+\usepackage{hyperref}
+\begin{document}
+
+  \title{Clinical Associations for NMF and NBS}
+  \author{Peter Castaldi}
+  \maketitle
+  \tableofcontents
+
+Using whole blood gene expression from three independent cohorts (ECLIPSE, COPDGene, and TESRA), we use NMF and NBS to identify clustering structure in whole blood gene expression, and we evaluate the clinical characteristics of these groups.
+
+<<init,echo=F>>=
+
+library(xtable)
+library(cluster)
+library(psych)
+library(reshape)
+library(hgu133plus2.db)
+options(stringsAsFactors=F)
+dat<-"/udd/repjc/RESEARCH/DATA/COPDGENE/"
+source("/udd/repjc/RESEARCH/CLUSTERING/ClustFuncsVer1.R")
+nmf<-"/udd/repjc/RESEARCH/NBS/Cluster_COPD_with_ECL_Basis/"
+figures<-"/udd/repjc/RESEARCH/NBS/NMF_COPD/COPD_1439_Normalized_NMF_LF4/FIGURES/"
+results<-"/udd/repjc/RESEARCH/NBS/NMF_COPD/COPD_1439_Normalized_NMF_LF4/RESULTS/"
+
+@  
+
+\section{Datasets Used}
+
+<<eclipse,echo=F>>=
+
+eclPheno<-read.table(paste("/proj/regeps/regep00/studies/ECLIPSE/data/biomarker/2013_GSK_Biomarker_Data/PJC/silverman_07oct13_SubjectDataTab.txt",sep=""),header=T,stringsAsFactors=F,sep="\t")
+eclPheno<-eclPheno[,-87]  # column 87 is screwed up
+
+#log transform biomarkers
+eclPheno$CC16<-log(eclPheno$CC.16..ng.mL..at.Baseline)
+eclPheno$CRP<-log(eclPheno$hsCRP..mg.L..at.Baseline)
+eclPheno$Fibrinogen<-log(eclPheno$Fibrinogen..mg.dL..at.B.L..or.M3.proxy.)
+eclPheno$IL6<-log(eclPheno$IL.6..pg.mL..at.Baseline)
+eclPheno$IL8<-log(eclPheno$IL.8..pg.mL..at.Baseline)
+eclPheno$CCL18<-log(eclPheno$CCL.18..ng.mL..at.Baseline)
+eclPheno$SPD<-log(eclPheno$SP.D..ng.mL..at.Baseline)
+eclPheno$TNFa<-log(eclPheno$TNFa..ng.mL..at.Baseline)
+
+## select and normalize some attributes and create NMF axes - preFEV1pp, emphysema, ratio, upper third, pi10, fvc, tlc: TLC has high missingness
+keepVars<-c("Global.Subject.ID","Age.in.years","Sex","Percent.predicted.post.BD.FEV1","Post.BD.FEV.FVC....","Exacerbations..Year.prior.to.Screening","FracVol...950HU.","Body.mass.index..kg.m2.","Number.of.pack.years.smoked","GOLD.Stage.code","Subject.group","Neutrophils..10.9.L.","Lymphocytes..10.9.L.","Monocytes..10.9.L.","Eosinophils..10.9.L.","CC16","CRP","Fibrinogen","IL6","IL8","CCL18","SPD","TNFa","MMRC.Numeric.score","Distance.walked..meters.","SGRQ.Total.Score","SGRQ.Symptoms.Score","SGRQ.Activites.Score","SGRQ.Impacts.Score","Fat.free.mass","Percent.oxygen.in.blood","Body.mass.index..kg.m2.","COPD.hospitalizations..prior.year","BODE.Index","History.of.hypertension","Cardiovascular.history..excl.HTN.","Chronic.bronchitis..ATS.DLD.","Chronic.phlegm..ATS.DLD.","Chronic.cough..ATS.DLD.","Fat.Free.Mass.Index..FFMI...Wouters","Current.smoker.code")
+
+eclPheno<-eclPheno[,keepVars]
+eclPheno$sid<-paste("EC",eclPheno$Global.Subject.ID,sep="")
+eclPheno<-eclPheno[,-1]
+names(eclPheno)[3]<-c("FEV1pp_utah")
+
+eclPheno<-rename(eclPheno,c(Neutrophils..10.9.L.="Neutrophils",Lymphocytes..10.9.L.="Lymphocytes",Monocytes..10.9.L.="Monocytes",Eosinophils..10.9.L.="Eosinophils",Exacerbations..Year.prior.to.Screening="ExacYearPrior"))
+
+#truncate exacerbations
+eclPheno$ExacYearPrior[eclPheno$ExacYearPrior>2]<-3
+
+#read in longitudinal exacerbation data
+exac<-read.csv("/udd/remhc/Work/Clustering/Nbs/silverman_07oct10.IncludingSevereExacerbations.csv")
+exac$sid<-paste("EC",exac$Global.Subject.ID,sep="")
+exac<-exac[exac$Year.category=="Years 1-3",c("sid","Number.of.Moderate.Severe.Exacerbations","Number.of.Severe.Exacerbations")]
+
+eclPheno<-merge(eclPheno,exac,by="sid")
+
+#truncate moderate to severe exacerbations at 9
+eclPheno$Number.of.Moderate.Severe.Exacerbations[eclPheno$Number.of.Moderate.Severe.Exacerbations>9]<-9
+
+eclPheno<-rename(eclPheno,c(Number.of.Moderate.Severe.Exacerbations="ProspectiveModSevExac"))
+
+#read in medication data
+meds<-read.csv("/proj/regeps/regep00/studies/ECLIPSE/analyses/repjc/DATA/PHENOTYPE/silverman_28mar11.Medication.ECLIPSE.csv",header=T,stringsAsFactors=F)
+meds$sid<-paste("EC",meds$Global.Subject.ID,sep="")
+meds<-meds[,c("sid",names(meds)[8:14])]
+eclPheno<-merge(eclPheno,meds,by="sid")
+
+#Read in genotype data
+gdata4<-read.table("/udd/repjc/RESEARCH/CLUSTERING/ECLIPSE_CHR4_GWSSNPs_May2014.raw",header=T,as.is=TRUE)
+gdata15<-read.table("/udd/repjc/RESEARCH/CLUSTERING/ECLIPSE_CHR15_GWSSNPs_May2014.raw",header=T,as.is=TRUE)
+gdata19<-read.table("/udd/repjc/RESEARCH/CLUSTERING/ECLIPSE_CHR19_GWSSNPs_May2014.raw",header=T,as.is=TRUE)
+
+gdata<-merge(gdata4[,c(1,7,8)],gdata15[,c(1,7,8)],by="FID")
+eclgdata<-merge(gdata,gdata19[,c(1,7)])
+
+names(eclgdata)[1]<-"sid"
+
+genesall<-merge(eclPheno[eclPheno$sid %in% eclgdata$sid,],eclgdata,by="sid")
+
+
+#Read clustering results for 1497
+eclnmfclus<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/ECLIPSE/ECL_NMF/ECL_1439_Normalized_NMF_LF4/label_pred.csv",header=F)
+ids<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/ECLIPSE/ECL_NMF/ECL_1439_Normalized_NMF_LF4/case_id_ecl.csv",header=F)
+eclclusdf<-data.frame("sid"=ids$V1,"cluster"=eclnmfclus$V1)
+
+#merge pheno with clusters
+eclhmp<-merge(eclPheno,eclclusdf,by="sid")
+
+@ 
+
+\section{Characteristics of Cohorts}
+
+\subsection{ECLIPSE}
+
+<<eclipsechar,echo=F>>=
+
+cat("\nNumber of Subjects in ECLIPSE = ",nrow(eclhmp))
+
+table(eclhmp$Subject.group)
+
+cat("\nThere are no current smokers in the data.")
+table(eclhmp$Current.smoker.code)
+
+@ 
+
+
+<<copdgenedata,echo=F>>=
+copdgene<-read.table(paste(dat,"Final10000_Dataset_12MAR13.txt",sep=""),header=T,sep="\t")
+
+lfu<-read.table("/udd/repjc/RESEARCH/DATA/COPDGENE/LFU/LFU_SidLevel_w_Comorbid_21Oct13.txt",sep="\t",header=T)
+lfu$Total_Exacerbations[lfu$Total_Exacerbations>9]<-9  #truncate total exaverbations at 9
+lfu$Total_Severe_Exacer[lfu$Total_Severe_Exacer>9]<-9
+
+#Read in genotype data
+gdata<-read.table("/udd/repjc/RESEARCH/CLUSTERING/GWSSNPsApril2012.raw",header=T,as.is=TRUE)  #copied from /proj/reglns/regln0b/DATA/COPDGENE/GENETIC/GWSSNPsApril2012.raw 
+gdata<-gdata[,c(1,7:11)]
+oldgdatanames<-names(gdata)[-1]
+substr(names(gdata)[-1],1,2)<-"rs"   #Make capital RS into small rs
+names(gdata)[-1]<-sapply(names(gdata)[-1],function(x) strsplit(x,"_")[[1]][1])
+names(gdata)[1]<-"sid"
+
+genesall<-merge(copdgene[copdgene$sid %in% gdata$sid,],gdata,by="sid")
+genesall<-genesall[genesall$race==1,]   #limit to NHWs
+
+gdata<-gdata[gdata$sid %in% genesall$sid,]  # limit genetic data to NHWs
+
+
+@ 
+
+<<copdgeneclusters,echo=F>>=
+#Read in clusters
+train<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/COPDGENE/Cluster_COPD_with_ECL_Basis_1439/label_copd_nmf_pred.csv",header=F)
+id<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/COPDGENE/Cluster_COPD_with_ECL_Basis_1439/case_id_copd.csv",header=F)
+map<-read.table("/udd/repjc/RESEARCH/NBS/NMF_COPD/COPD_1439_Normalized_NMF_LF4/GSEtoCGMap.txt",header=F,sep="\t")
+map<-as.data.frame(t(map)[-1,])
+t<-sapply(strsplit(map$V1,"\\("),function(x) x[2])
+map$sid<-sapply(strsplit(t,"\\)"),function(x) x[1])
+
+train<-cbind(train,id)
+names(train)<-c("cluster","gsmid")
+train<-merge(train,map[,c("sid","V2")],by.x="gsmid",by.y="V2")
+
+trainall<-merge(train,copdgene,by="sid")
+trainsome<-trainall[c("sid","FEV1pp_utah","Age_Enroll","gender","race","ATS_PackYears","Chronic_Bronchitis","BMI","WallAreaPct_seg","pctEmph_Slicer","UpperThird_LowerThird_Slicer")]
+
+  
+@ 
+
+\subsection{COPDGene Characteristics}
+
+<<copdgenechar,echo=F>>=
+
+cat("\nNumber of COPDGene subjects = ",nrow(trainall))
+
+cat("\nBreakdown by GOLD Stage:")
+table(trainall$finalGold)
+
+cat("\nCurrent Smoking")
+table(trainall$SmokCigNow)
+      
+@ 
+
+<<readTESRA,echo=F>>=
+tesra<-read.csv("/proj/regeps/regep00/studies/ECLIPSE/analyses/repjc/ECLIPSE_2010/NBS/TESRA/TESRA_Pheno_for_Yale_9-2-14.csv",header=T)
+tesra<-tesra[,-1]
+
+tesranmf<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/TESRA/Cluster_TESRA_with_ECL_Basis_1439/label_tesra_nmf_pred.csv",header=F)
+id<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/TESRA/Cluster_TESRA_with_ECL_Basis_1439/case_id_tesra.csv",header=F)
+
+tesraclus<-cbind(tesranmf,id)
+names(tesraclus)<-c("cluster","PT")
+
+tesranmf<-merge(tesra,tesraclus,by="PT")
+tesranmf<-rename(tesranmf,c(PT="sid",BFEV1PPA="FEV1pp_utah"))
+tesranmf$COPD<-"NA"
+tesranmf$COPD[tesranmf$FEV1pp_utah<=80 && tesranmf$BFEV1FVC<=0.7]<-1
+tesranmf$COPD[tesranmf$FEV1pp_utah>80 && tesranmf$BFEV1FVC>0.7]<-0
+
+
+@ 
+
+\section{TESRA Characteristics}
+
+<<tesrachar,echo=F>>=
+
+  cat("\nNumber of subjects used in TESRA = ",nrow(tesranmf))
+
+  cat("\nNumber of subjects with COPD")
+  table(tesranmf$COPD)
+
+  cat("\nTESRA consists entirely of former smokers.")
+
+@ 
+
+
+<<defineassessmentfunction,echo=F,results=tex>>=
+
+makeassoc<-function(ccsall,ccssome,cdf,gdata,clusvar,SD="N",k,lambda,printtab=FALSE){   #ccsall = dataframe with all clinical data + cluster results, ccssome = dataframe with clinical characteristics for printout, cdf = dataframe with cluster results and sid only, gdata = dataframe with additively coded genotypes and sids, clusvar = name of cluster variable (vector with all cluster assignments), k = number of clusters, lambda = lambda for cc algorithm
+  if(min(table(cdf[,clusvar]))<5 | length(table(cdf[,clusvar]))<k ) {   # This chunk prevents the ANOVA from failing when one cluster size is too small
+    aovout<-vector()
+    for(a in 1:5){
+      aovout[a]<-1
+    }
+  } else {
+    char<-cluscharsd(ccsall[,c("sid",clusvar)],bdata=ccssome,clusvar=clusvar,SD=SD)
+    ref<-names(char)[2*which.max(char["FEV1pp_utah",seq(2,ncol(char),2)])]   # get the number of the cluster with best FEV1, this will be reference
+    ref<-strsplit(ref,":")[[1]][1]
+    ref<-strsplit(ref,"C")[[1]][2]
+    if(printtab) print(xtable(char,caption=paste("Results for 4 bins, k=",k,", lambda=",lambda,sep=""),digits=c(0,(rep(c(0,2),ncol(char)/2)))),floating.environment="sidewaystable")  
+    gd<-merge(ccssome,gdata,by="sid")
+    gd<-merge(gd,cdf[,c("sid",clusvar)])                  
+    x<-snpglm(gd,snps=c(names(gdata)[-1]),ref=ref,cname=clusvar,a=k,rowname=TRUE,adjust=NULL)
+    if(printtab) t<-snpORPrint(snpres=x,k=k,ref=ref,tables=NULL,file=NULL,print=TRUE)
+    aovout<-vector()
+    for(a in names(gdata)[-1]){
+      aovout[a]<-summary(aov(gd[,a]~as.factor(gd[,clusvar])))[[1]][[5]][1]
+    }
+  }
+  aovout
+}
+
+
+@ 
+
+\section{NMF Solutions}
+
+\subsection{ECLIPSE NMF}
+
+<<eclnmf,echo=F>>=
+
+  x<-describeBy(eclhmp[,c(2,4:9,42,43)],eclhmp$cluster)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(eclhmp$cluster,eclhmp$ProspectiveModSevExac),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(ProspectiveModSevExac)~as.factor(cluster),data=eclhmp)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(ProspectiveModSevExac ~ as.factor(cluster), data = eclhmp)
+ summary(x)$coefficients
+
+ cat("\nZero-inflated negative binomial does not converge")
+# eclhmp$ExacYN<-ifelse(eclhmp$ProspectiveModSevExac>0,1,0)
+# zi<-zeroinfl(formula = ProspectiveModSevExac ~ as.factor(cluster) | ExacYN, data = eclhmp, dist = "negbin", EM = TRUE)
+
+ eclhmp$ExacBin<-ifelse(eclhmp$ProspectiveModSevExac>=2,1,0)
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ x<-glm(ExacBin ~ as.factor(cluster), data = eclhmp, family= "binomial")
+ summary(x)$coefficients
+
+
+@ 
+
+
+\subsection{COPDGene NMF Replication}
+
+<<copdgenenmf,echo=F>>=
+
+  trainsome<-trainall[,c(names(trainsome),"cluster")]
+  x<-describeBy(trainsome[,c(2,3,6,8:11)],trainsome$cluster)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+  lfu2<-merge(trainsome,lfu,by="sid")
+  lfu2<-lfu2[complete.cases(lfu2[,c("cluster","Total_Exacerbations")]),c("cluster","Total_Exacerbations")]
+
+ cat("\nNumber of subjects analyzed in regression = ",nrow(lfu2))
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(lfu2$cluster,lfu2$Total_Exacerbations),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(Total_Exacerbations)~as.factor(cluster),data=lfu2)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(Total_Exacerbations ~ as.factor(cluster), data = lfu2)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ lfu2$ExacBin<-ifelse(lfu2$Total_Exacerbations>=2,1,0) 
+ x<-glm(ExacBin ~ as.factor(cluster), data = lfu2, family= "binomial")
+ summary(x)$coefficients
+
+
+@ 
+
+
+\subsection{TESRA NMF Replication}
+
+<<tesranmf,echo=F>>=
+
+  x<-describeBy(tesranmf[,c(8,2,5,6,7,9:12)],tesranmf$cluster)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+ cat("\nNumber of subjects analyzed in regression = ",nrow(tesranmf))
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(tesranmf$cluster,tesranmf$EXACERB),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(EXACERB)~as.factor(cluster),data=tesranmf)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(EXACERB ~ as.factor(cluster), data = tesranmf)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ tesranmf$ExacBin<-ifelse(tesranmf$EXACERB>=2,1,0) 
+ x<-glm(ExacBin ~ as.factor(cluster), data = tesranmf, family= "binomial")
+ summary(x)$coefficients
+
+
+@ 
+
+
+\section{NBS}
+
+\subsection{ECLIPSE NBS}
+
+<<eclnbs,echo=F>>=
+
+  eclnbs<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/ECLIPSE/ECL_NBS/ECL_1439_Normalized_NBS_LF4/label_pred.csv",header=F)
+  eclid<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/ECLIPSE/ECL_NBS/ECL_1439_Normalized_NBS_LF4/case_id_ecl.csv",header=F)
+
+  eclnbs<-data.frame("nbs"=eclnbs$V1,"sid"=eclid$V1)
+  eclhmp<-merge(eclnbs,eclhmp,by="sid")
+
+  x<-describeBy(eclhmp[,c(5,3,6:10,42,44)],eclhmp$nbs)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(eclhmp$nbs,eclhmp$ProspectiveModSevExac),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(ProspectiveModSevExac)~as.factor(nbs),data=eclhmp)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(ProspectiveModSevExac ~ as.factor(nbs), data = eclhmp)
+ summary(x)$coefficients
+
+ cat("\nZero-inflated negative binomial does not converge")
+# eclhmp$ExacYN<-ifelse(eclhmp$ProspectiveModSevExac>0,1,0)
+# zi<-zeroinfl(formula = ProspectiveModSevExac ~ as.factor(cluster) | ExacYN, data = eclhmp, dist = "negbin", EM = TRUE)
+
+ eclhmp$ExacBin<-ifelse(eclhmp$ProspectiveModSevExac>=2,1,0)
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ x<-glm(ExacBin ~ as.factor(nbs), data = eclhmp, family= "binomial")
+ summary(x)$coefficients
+
+
+@ 
+
+
+\subsection{COPDGene NBS Replication}
+
+<<copdgenenbs,echo=F>>=
+
+train<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/COPDGENE/Cluster_COPD_with_ECL_Basis_1439/label_copd_nbs_pred.csv",header=F)
+id<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/COPDGENE/Cluster_COPD_with_ECL_Basis_1439/case_id_copd.csv",header=F)
+map<-read.table("/udd/repjc/RESEARCH/NBS/NMF_COPD/COPD_1439_Normalized_NMF_LF4/GSEtoCGMap.txt",header=F,sep="\t")
+map<-as.data.frame(t(map)[-1,])
+t<-sapply(strsplit(map$V1,"\\("),function(x) x[2])
+map$sid<-sapply(strsplit(t,"\\)"),function(x) x[1])
+
+train<-cbind(train,id)
+names(train)<-c("nbs","gsmid")
+train<-merge(train,map[,c("sid","V2")],by.x="gsmid",by.y="V2")
+
+cgnbs<-merge(train,trainall,by="sid")
+
+trainsome<-cgnbs[,c(names(trainsome),"nbs")]
+
+  x<-describeBy(trainsome[,c(2,3,6,8:11)],trainsome$nbs)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+  lfu2<-merge(trainsome,lfu,by="sid")
+  lfu2<-lfu2[complete.cases(lfu2[,c("nbs","Total_Exacerbations")]),c("nbs","Total_Exacerbations")]
+
+ cat("\nNumber of subjects analyzed in regression = ",nrow(lfu2))
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(lfu2$nbs,lfu2$Total_Exacerbations),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(Total_Exacerbations)~as.factor(nbs),data=lfu2)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(Total_Exacerbations ~ as.factor(nbs), data = lfu2)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ lfu2$ExacBin<-ifelse(lfu2$Total_Exacerbations>=2,1,0) 
+ x<-glm(ExacBin ~ as.factor(nbs), data = lfu2, family= "binomial")
+ summary(x)$coefficients
+
+@ 
+
+
+\subsection{COPDGene Fresh NBS}
+
+<<copdgenefreshnbs,echo=F>>=
+
+train<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/COPDGENE/COPD_NBS/COPD_1439_Normalized_NBS_LF4/label_pred.csv",header=F)
+id<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/COPDGENE/COPD_NBS/COPD_1439_Normalized_NBS_LF4/case_id_copd.csv",header=F)
+map<-read.table("/udd/repjc/RESEARCH/NBS/NMF_COPD/COPD_1439_Normalized_NMF_LF4/GSEtoCGMap.txt",header=F,sep="\t")
+map<-as.data.frame(t(map)[-1,])
+t<-sapply(strsplit(map$V1,"\\("),function(x) x[2])
+map$sid<-sapply(strsplit(t,"\\)"),function(x) x[1])
+
+train<-cbind(train,id)
+names(train)<-c("nbs","gsmid")
+train<-merge(train,map[,c("sid","V2")],by.x="gsmid",by.y="V2")
+
+cgnbs<-merge(train,trainall,by="sid")
+
+trainsome<-cgnbs[,c(names(trainsome),"nbs")]
+
+  x<-describeBy(trainsome[,c(2,3,6,8:11)],trainsome$nbs)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+  lfu2<-merge(trainsome,lfu,by="sid")
+  lfu2<-lfu2[complete.cases(lfu2[,c("nbs","Total_Exacerbations")]),c("nbs","Total_Exacerbations")]
+
+ cat("\nNumber of subjects analyzed in regression = ",nrow(lfu2))
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(lfu2$nbs,lfu2$Total_Exacerbations),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(Total_Exacerbations)~as.factor(nbs),data=lfu2)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(Total_Exacerbations ~ as.factor(nbs), data = lfu2)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Prospective Exacerbations Dichotomized at 2, Negative Binomial:")
+ lfu2$ExacBin<-ifelse(lfu2$Total_Exacerbations>=2,1,0) 
+ x<-glm(ExacBin ~ as.factor(nbs), data = lfu2, family= "binomial")
+ summary(x)$coefficients
+
+@ 
+
+
+\subsection{TESRA NBS Replication}
+
+<<tesranbs,echo=F>>=
+
+tesranbs<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/TESRA/Cluster_TESRA_with_ECL_Basis_1439/label_tesra_nbs_pred.csv",header=F)
+id<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/TESRA/Cluster_TESRA_with_ECL_Basis_1439/case_id_tesra.csv",header=F)
+
+tesraclus<-cbind(tesranbs,id)
+names(tesraclus)<-c("nbs","PT")
+
+tesranbs<-merge(tesra,tesraclus,by="PT")
+
+  
+  x<-describeBy(tesranbs[,c(8,2,5,6,7,9:12)],tesranbs$nbs)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+ cat("\nNumber of subjects analyzed in regression = ",nrow(tesranbs))
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(tesranbs$nbs,tesranbs$EXACERB),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(EXACERB)~as.factor(nbs),data=tesranbs)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(EXACERB ~ as.factor(nbs), data = tesranbs)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Exacerbations Dichotomized at 2, Negative Binomial:")
+ tesranbs$ExacBin<-ifelse(tesranbs$EXACERB>=2,1,0) 
+ x<-glm(ExacBin ~ as.factor(nbs), data = tesranbs, family= "binomial")
+ summary(x)$coefficients
+
+
+@ 
+
+
+\subsection{TESRA Fresh NBS}
+
+<<tesranbs,echo=F>>=
+
+tesranbs<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/TESRA/TESRA_NBS/TESRA_1439_Normalized_NBS_LF4/label_pred.csv",header=F)
+id<-read.csv("/udd/repjc/RESEARCH/NBS/RESULTS/TESRA/TESRA_NBS/TESRA_1439_Normalized_NBS_LF4/case_id_tesra.csv",header=F)
+
+tesraclus<-cbind(tesranbs,id)
+names(tesraclus)<-c("nbs","PT")
+
+tesranbs<-merge(tesra,tesraclus,by="PT")
+
+  
+  x<-describeBy(tesranbs[,c(8,2,5,6,7,9:12)],tesranbs$nbs)
+
+  lapply(x,function(x) x[,c("n","mean","sd","median")])
+
+ cat("\nNumber of subjects analyzed in regression = ",nrow(tesranbs))
+
+ cat("\nRow proportions for Cluster by Prospective Exacerbations")
+ round(prop.table(table(tesranbs$nbs,tesranbs$EXACERB),1)*100,1) 
+
+ cat("\nAssociation with Number of Exacerbations, Ordinal Regression:")
+ x<-clm(as.factor(EXACERB)~as.factor(nbs),data=tesranbs)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Number of Exacerbations, Negative Binomial:")
+ x<-glm.nb(EXACERB ~ as.factor(nbs), data = tesranbs)
+ summary(x)$coefficients
+
+ cat("\nAssociation with Exacerbations Dichotomized at 2, Negative Binomial:")
+ tesranbs$ExacBin<-ifelse(tesranbs$EXACERB>=2,1,0) 
+ x<-glm(ExacBin ~ as.factor(nbs), data = tesranbs, family= "binomial")
+ summary(x)$coefficients
+
+
+@ 
+
+
+
+\end{document}
