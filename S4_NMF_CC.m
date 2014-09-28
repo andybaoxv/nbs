@@ -3,16 +3,28 @@
 %% Load COPDGene Expression Dataset
 
 addpath('/Users/changyale/python/nbs/');
+% data_exp: 12531 x 136
 load data_gene_expression_copd
 % Deprecated, this copd 1500 dataset is incorrect
+% data_exp_1500: 1487 x 136
 load data_gene_expression_copd_1500
+% data_exp_3000: 3096 x 136
 load data_gene_expression_copd_3000
+% data_exp_3000_reorder: 3096 x 136
+load data_gene_expression_copd_3000_reorder
+% eata_exp_ecl: 3096 x 232
 load data_gene_expression_ecl
+% data_exp_tesra: 3096 x 247
+load data_gene_expression_tesra
+% 1439 x 232
 load data_gene_expression_ecl_1439
-data_copd_overlap_with_ecl = csvread('data_copd_overlap_with_ecl.csv');
+% 1439 x 136
+load data_copd_overlap_with_ecl
+% 1439 x 247
+load data_tesra_overlap_with_ecl
 
 % choose which dataset to use
-flag_dataset = 6;
+flag_dataset = 7;
 if flag_dataset == 1
     data_use = data_exp;
 elseif flag_dataset == 2
@@ -20,11 +32,17 @@ elseif flag_dataset == 2
 elseif flag_dataset == 3
     data_use = data_exp_3000;
 elseif flag_dataset == 4
-    data_use = data_exp_ecl;
+    data_use = data_exp_3000_reorder;
 elseif flag_dataset == 5
-    data_use = data_gene_expression_ecl_1439;
+    data_use = data_exp_ecl;
 elseif flag_dataset == 6
+    data_use = data_exp_tesra;
+elseif flag_dataset == 7
+    data_use = data_gene_expression_ecl_1439;
+elseif flag_dataset == 8
     data_use = data_copd_overlap_with_ecl;
+elseif flag_dataset == 9
+    data_use = data_tesra_overlap_with_ecl;
 else
     disp(['Error: Should Specify input dataset'])
 end
@@ -34,7 +52,7 @@ end
 cnum = 4;
 
 % whether to normalize the dataset
-flag_normalization = true;
+flag_normalization = false;
 if flag_normalization
     X = NormalizeFea(data_use,1);
 else
