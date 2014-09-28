@@ -2,7 +2,7 @@
 
 %% Load COPDGene Expression Dataset
 
-addpath('/home/changyale/python/nbs/');
+addpath('/home/changyale/python/nbs_py/');
 % data_exp: 12531 x 136
 load data_gene_expression_copd
 % Deprecated, this copd 1500 dataset is incorrect

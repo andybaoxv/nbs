@@ -1,7 +1,7 @@
 % This script run consensus clustering with NBS
 
 n_consensus = 100;
-flag_normalization = false;
+flag_normalization = true;
 
 %% Parameter setting for NBS
 % Set the number of latent factors
@@ -17,7 +17,7 @@ option.zoptions.iter = 500;
 option.zoptions.gamma = 200;
 
 % This parameter is very critical for the performance of the algorithm
-option.zoptions.optGamma = 0.1;
+option.zoptions.optGamma = 1;
 
 option.zoptions.tof = 1e-4;
 option.zoptions.dis = false;
