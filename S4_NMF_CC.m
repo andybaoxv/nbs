@@ -2,7 +2,7 @@
 
 %% Load COPDGene Expression Dataset
 
-addpath('/Users/changyale/python/nbs/');
+addpath('/home/changyale/python/nbs/');
 % data_exp: 12531 x 136
 load data_gene_expression_copd
 % Deprecated, this copd 1500 dataset is incorrect
@@ -22,7 +22,7 @@ load data_gene_expression_ecl_1439
 load data_copd_overlap_with_ecl
 % 1439 x 247
 load data_tesra_overlap_with_ecl
-
+%%
 % choose which dataset to use
 flag_dataset = 7;
 if flag_dataset == 1
@@ -52,7 +52,7 @@ end
 cnum = 4;
 
 % whether to normalize the dataset
-flag_normalization = false;
+flag_normalization = true;
 if flag_normalization
     X = NormalizeFea(data_use,1);
 else
@@ -61,7 +61,7 @@ end
 
 %% Add NBS code
 % Directory of NBS code
-library_path = '/Users/changyale/matlab/nbs';
+library_path = '/home/changyale/matlab/nbs';
 addpath(genpath(library_path))
 
 % Number of NMF runs for consensus clustering
