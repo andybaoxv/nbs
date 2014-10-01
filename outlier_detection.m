@@ -1,16 +1,25 @@
 % This script detects whether there are outliers in three datasets:
 % ECLIPSE, COPDGene, TESRA
 
+%% Parameter Settings
+flag_all = 3;
+flag_normalization = true;
+
+%%
 % Load three datasets
-addpath('/Users/changyale/python/nbs/');
+addpath('/home/changyale/python/nbs_py/');
+addpath('/home/changyale/dataset/ECL_CG_TESRA/')
 % 1439 x 232
 load data_gene_expression_ecl_1439
 % 1439 x 136
 load data_copd_overlap_with_ecl
 % 1439 x 247
 load data_tesra_overlap_with_ecl
+% 3096 x 615
+load data_ecl_cg_tesra
+% 1439 x 615
+load data_ecl_cg_tesra_1439
 
-flag_normalization = true;
 if flag_normalization
     data_ecl = NormalizeFea(data_gene_expression_ecl_1439,1);
     data_copd = NormalizeFea(data_copd_overlap_with_ecl,1);
@@ -30,8 +39,14 @@ clear data_tesra_overlap_with_ecl;
 [coeff_tesra,score_tesra,latent_tesra] = pca(data_tesra');
 
 % Apply PCA on three datasets
-[coeff_all,score_all,latent_all] = pca([data_ecl,data_copd,data_tesra]');
-
+if flag_all == 1
+    [coeff_all,score_all,latent_all] = pca([data_ecl,data_copd,data_tesra]');
+elseif flag_all == 2
+    [coeff_all,score_all,latent_all] = pca(data_ecl_cg_tesra');
+elseif flag_all == 3
+    [coeff_all,score_all,latent_all] = pca(data_ecl_cg_tesra_1439');
+end
+    
 % Visualization on 2 dimensional space
 figure(1);
 % hold on
