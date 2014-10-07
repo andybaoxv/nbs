@@ -5,7 +5,7 @@ clear all, close all, clc;
 % choose which dataset to use: 1->3096, 2->1439
 flag_dataset = 2;
 % whether to normalize dataset
-flag_normalization = true;
+flag_normalization = false;
 % number of runs for consensus clustering
 n_consensus = 100;
 
@@ -23,8 +23,8 @@ options_nmf.dist = 'nnls';
 % *************** parameter settings for NBS ************************
 % Set the number of latent factors for NBS
 options_nbs.K = 4;
-options_nbs.iter = 500;
-options_nbs.zoptions.iter = 500;
+options_nbs.iter = 1000;
+options_nbs.zoptions.iter = 1000;
 % initial value of gamma
 options_nbs.zoptions.gamma = 200;
 % This parameter is very critical for the performance of the algorithm
@@ -104,6 +104,7 @@ tstats = {};
 indClust_NBS = {};
 
 % use parallel computing
+tic
 parfor i = 1:n_consensus
     % apply NMF
     disp(['run-> ' num2str(i)]);
@@ -123,6 +124,7 @@ parfor i = 1:n_consensus
     % cluster samples based on coefficient matrix H
     indClust_NBS{i} = NMFCluster(H{i});
 end
+toc
 
 %% compute co-occurrence matrix for NMF and NBS
 mat_co_nmf = compute_co_occurrence(indClust_NMF);
@@ -143,3 +145,21 @@ draw_dendrogram_heatmap(mat_co_nbs,3,4);
 [A_sel,Y_sel] = select_result(A,Y,label_nmf);
 [W_sel,H_sel] = select_result(W,H,label_nbs);
 
+%% Validation using cohorts: CG, TESRA
+% data normalization
+if flag_normalization
+    data_cg_1439 = NormalizeFea(data_cg_1439,1);
+    data_tesra_1439 = NormalizeFea(data_tesra_1439,1);
+end
+
+% case 1: use NMF basis of ECL
+Y_pred_cg = inv(A_sel'*A_sel)*A_sel'*data_cg_1439;
+label_pred_nmf_cg = NMFCluster(Y_pred_cg);
+Y_pred_tesra = inv(A_sel'*A_sel)*A_sel'*data_tesra_1439;
+label_pred_nmf_tesra = NMFCluster(Y_pred_tesra);
+
+% case 2: use NBS basis of ECL
+H_pred_cg = inv(W_sel'*W_sel)*W_sel'*data_cg_1439;
+label_pred_nbs_cg = NMFCluster(H_pred_cg);
+H_pred_tesra = inv(W_sel'*W_sel)*W_sel'*data_tesra_1439;
+label_pred_nbs_tesra = NMFCluster(H_pred_tesra); 
