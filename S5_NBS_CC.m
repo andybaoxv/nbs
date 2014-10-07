@@ -5,20 +5,16 @@ flag_normalization = true;
 
 %% Parameter setting for NBS
 % Set the number of latent factors
-option.K = 10;
+option.K = 4;
 option.iter = 500;
-
 % Defaule clustering settings
 option.zoptions.iter = 500;
-
 % Relate the clustering performance
 % Better set this value to be 200
 % Note this is just the initial value of gamma
 option.zoptions.gamma = 200;
-
 % This parameter is very critical for the performance of the algorithm
 option.zoptions.optGamma = 1;
-
 option.zoptions.tof = 1e-4;
 option.zoptions.dis = false;
 option.zoptions.distance = 'nnls';
