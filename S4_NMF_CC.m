@@ -2,19 +2,19 @@
 
 %% Parameter Settings
 % choose which dataset to use
-flag_dataset = 10;
+flag_dataset = 11;
 % whether to normalize dataset
-flag_normalization = false;
+flag_normalization = true;
 % Specify the number of latent factors(#metagenes). Note that the number of
 % clusters is usually set to be equal to this value in subsequent analysis
 cnum = 4;
 
 %% Load COPDGene Expression Dataset
 
-addpath('/home/changyale/python/nbs_py/');
-addpath('/home/changyale/dataset/ECL_CG_TESRA/');
+addpath('~/python/nbs_py/');
+addpath('~/dataset/ECL_CG_TESRA/');
 % Directory of NBS code
-library_path = '/home/changyale/matlab/nbs';
+library_path = '~/matlab/nbs';
 addpath(genpath(library_path))
 
 % data_exp: 12531 x 136

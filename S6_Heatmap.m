@@ -19,7 +19,7 @@ orig_tree  = seqlinkage(Dist,'average');
 Tree = linkage(Dist,'average');
 fid1 = figure(1);
 % Order = optimalleaforder(Tree, Dist);
-[H_1,T,perm] = dendrogram(Tree,0,'orientation','left');
+[H_1,T,perm] = dendrogram(Tree,0,'orientation','top');
 Order = perm;
 
 C = zeros(num_sample,num_sample);

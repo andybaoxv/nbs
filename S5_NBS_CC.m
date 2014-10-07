@@ -5,7 +5,7 @@ flag_normalization = true;
 
 %% Parameter setting for NBS
 % Set the number of latent factors
-option.K = 4;
+option.K = 10;
 option.iter = 500;
 
 % Defaule clustering settings
@@ -29,7 +29,7 @@ H = {};
 tstats = {};
 indClust_NBS = {};
 % Normalization of the original dataset
-data_use = data_gene_expression_ecl_1439;
+data_use = data_ecl_cg_tesra_1439;
 if flag_normalization
     X = NormalizeFea(data_use,1);
 else
