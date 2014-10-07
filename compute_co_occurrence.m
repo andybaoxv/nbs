@@ -3,9 +3,9 @@
 
 function mat_co = compute_co_occurrence(ind_cluster)
 
-mat_co = zeros(n_samples);
 n_consensus = length(ind_cluster);
 n_samples = length(ind_cluster{1,1});
+mat_co = zeros(n_samples);
 
 for i = 1:n_consensus
     for j = 1:n_samples

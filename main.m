@@ -124,7 +124,7 @@ parfor i = 1:n_consensus
     indClust_NBS{i} = NMFCluster(H{i});
 end
 
-% compute co-occurrence matrix for NMF and NBS
+%% compute co-occurrence matrix for NMF and NBS
 mat_co_nmf = compute_co_occurrence(indClust_NMF);
 mat_co_nbs = compute_co_occurrence(indClust_NBS);
 
@@ -135,9 +135,9 @@ Z_nbs = linkage(squareform(n_consensus-mat_co_nbs),'av');
 label_nbs = cluster(Z_nbs,'maxclust',options_nbs.K);
 
 % draw dendrograms and heatmaps for nmf
-draw_dendrogram_heatmap(mat_co_nmf,'nmf_dend','nmf_heatmap');
+draw_dendrogram_heatmap(mat_co_nmf,1,2);
 % draw dendrograms and heatmaps for nbs
-draw_dendrogram_heatmap(mat_co_nbs,'nbs_dend','nbs_heatmap');
+draw_dendrogram_heatmap(mat_co_nbs,3,4);
 
 % select result from n_consensus runs for NMF and NBS
 [A_sel,Y_sel] = select_result(A,Y,label_nmf);

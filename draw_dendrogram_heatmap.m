@@ -1,5 +1,5 @@
 % This function draw heatmap and denrogram given similarity matrix
-function [fig_1,fig_2] = draw_dendrogram_heatmap(S,idx_fig_1,idx_fig2)
+function [fig_1,fig_2] = draw_dendrogram_heatmap(S,idx_fig_1,idx_fig_2)
 % Parameters
 % ----------
 % S: matrix, shape(n_samples,n_samples)
