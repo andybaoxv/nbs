@@ -36,6 +36,7 @@ load data_gene_expression_ecl_1439
 load data_copd_overlap_with_ecl
 % 1439 x 247
 load data_tesra_overlap_with_ecl
+% After COMBAT normalization for batches
 % 3096 x 615
 load data_ecl_cg_tesra
 % 1439 x 615
