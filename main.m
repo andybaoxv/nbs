@@ -11,7 +11,7 @@ n_consensus = 100;
 
 % ************** parameter settings for standard NMF *******************
 % number of latent factors for NMF
-cnum = 3;
+cnum = 4;
 % maximal number of iterations
 options_nmf.iter = 1000;
 % Tolerance/Precision
@@ -22,7 +22,7 @@ options_nmf.dis = false;
 options_nmf.dist = 'nnls';
 % *************** parameter settings for NBS ************************
 % Set the number of latent factors for NBS
-options_nbs.K = 3;
+options_nbs.K = 4;
 options_nbs.iter = 1000;
 options_nbs.zoptions.iter = 1000;
 % initial value of gamma
